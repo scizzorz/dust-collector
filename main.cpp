@@ -13,7 +13,7 @@ int openGate = 0;
 int open = false;
 
 void setup() {
-  for(int i=0; i<NUM_GATES; i++) {
+  for (int i = 0; i < NUM_GATES; i++) {
     gates[i].attach(servoPins[i]);
     gates[i].write(OPEN);
     delay(MOVETIME);
@@ -23,15 +23,14 @@ void setup() {
   }
 }
 
-
 void loop() {
-  for(int i=0; i<NUM_GATES; i++) {
+  for (int i = 0; i < NUM_GATES; i++) {
     int pressed = digitalRead(buttonPins[i]);
-    if(pressed) {
+    if (pressed) {
       gates[i].write(OPEN);
       delay(MOVETIME);
       open = true;
-      if(open && openGate != i) {
+      if (open && openGate != i) {
         gates[openGate].write(CLOSED);
         delay(MOVETIME);
       }
@@ -40,7 +39,6 @@ void loop() {
   }
   delay(10);
 }
-
 
 int main(void) {
   init();
