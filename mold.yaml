@@ -1,0 +1,18 @@
+version: "0.3.2"
+
+includes:
+  - url: "github.com/xtfc/std.mold"
+    ref: "0.3"
+
+recipes:
+  build:
+    help: "Compile the firmware"
+    command: ["make"]
+
+  upload:
+    help: "Compile and upload the firmware"
+    command: ["make", "upload"]
+
+  fmt:
+    help: "Autoformat with clang-format"
+    command: ["clang-format", "-i", "--style=llvm", "main.cpp"]
