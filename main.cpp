@@ -6,6 +6,38 @@
 #define NEUTRAL 90
 #define OPEN true
 #define CLOSED false
+#define ON true
+#define OFF false
+#define COLLECTOR_WAIT 300
+
+int collectorOn = A4;
+int collectorOff = A5;
+
+class Collector {
+public:
+  int onPin;
+  int offPin;
+  bool status;
+
+  Collector(int onPin, int offPin)
+      : onPin(onPin), offPin(offPin), status(OFF) {}
+
+  void init() {
+    pinMode(this->onPin, OUTPUT);
+    pinMode(this->offPin, OUTPUT);
+  }
+
+  void on() { this->set(ON); }
+
+  void off() { this->set(OFF); }
+
+  void set(bool to) {
+    int pin = to ? this->onPin : this->offPin;
+    digitalWrite(pin, HIGH);
+    delay(COLLECTOR_WAIT);
+    digitalWrite(pin, LOW);
+  }
+};
 
 class Gate {
 public:
@@ -18,9 +50,7 @@ public:
 
   Gate(int buttonPin, int servoPin, int openPosition, int closePosition)
       : buttonPin(buttonPin), servoPin(servoPin), openPosition(openPosition),
-        closePosition(closePosition) {
-    this->status = CLOSED;
-  }
+        closePosition(closePosition), status(CLOSED) {}
 
   void init() {
     pinMode(this->buttonPin, INPUT);
@@ -48,7 +78,10 @@ Gate gates[NUM_GATES] = {
     Gate(7, 6, 80, 100),   Gate(4, 5, 80, 100),   Gate(2, 3, 80, 100),
 };
 
+Collector collector(A4, A5);
+
 void setup() {
+  collector.init();
   for (int i = 0; i < NUM_GATES; i++) {
     gates[i].init();
     delay(500);
