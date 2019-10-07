@@ -13,12 +13,16 @@ collector.
 * [Dust collector switch][switch] - remote control is wired to Arduino
 * [Dust collector][collector]
 * [High-torque servos][servos]
-* [Push buttons][buttons]
+  * [Higher-torque servos][better-servos]
+* [Buttons][buttons]
+* [Neopixels][neopixels]
 
 [arduino]: https://www.amazon.com/gp/product/B008GRTSV6
+[better-servos]: https://www.amazon.com/gp/product/B07G33GTF7
 [buttons]: https://www.amazon.com/gp/product/B07L1MTND7
 [collector]: https://www.amazon.com/gp/product/B001R23SS6
 [gates]: https://www.amazon.com/gp/product/B00LPPF0S6
 [iltms]: https://www.youtube.com/watch?v=D1JWH425o7c
+[neopixels]: https://www.amazon.com/dp/B00KAE3R1U
 [servos]: https://www.amazon.com/gp/product/B00M8TXSBO
 [switch]: https://www.amazon.com/gp/product/B00004S9AI
