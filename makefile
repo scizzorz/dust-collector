@@ -9,6 +9,6 @@ BOOTLOADER_PARENT = /usr/share/arduino/hardware/archlinux-arduino/avr/bootloader
 
 
 BOARD_TAG    = uno
-ARDUINO_LIBS = Servo
+ARDUINO_LIBS = Servo Adafruit_NeoPixel
 
 include /usr/share/arduino/Arduino.mk
