@@ -6,9 +6,10 @@ ARDUINO_CORE_PATH = /usr/share/arduino/hardware/archlinux-arduino/avr/cores/ardu
 BOARDS_TXT = /usr/share/arduino/hardware/archlinux-arduino/avr/boards.txt
 ARDUINO_VAR_PATH = /usr/share/arduino/hardware/archlinux-arduino/avr/variants
 BOOTLOADER_PARENT = /usr/share/arduino/hardware/archlinux-arduino/avr/bootloaders
+ARDUINO_LIB_PATH = /usr/share/arduino/hardware/archlinux-arduino/avr/libraries
 
 
 BOARD_TAG    = uno
-ARDUINO_LIBS = Servo Adafruit_NeoPixel
+ARDUINO_LIBS = Servo Adafruit_NeoPixel EEPROM
 
 include /usr/share/arduino/Arduino.mk
