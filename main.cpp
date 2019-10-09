@@ -32,6 +32,11 @@
 #define STATE_CLOSED 2
 #define STATE_OPEN 3
 
+#define MAGIC_0 'S'
+#define MAGIC_1 'C'
+#define MAGIC_2 'I'
+#define MAGIC_3 'Z'
+
 unsigned char knobToMem(int knobReading) { return knobReading / 4; }
 
 int memToPosition(unsigned char mem) { return NEUTRAL + (mem - 128) / 4; }
@@ -310,8 +315,8 @@ void pressProgramming(int i) {
 void initMemory() {
   // check for the magic header at the start of EEPROM. if it's not set, this
   // memory is (very likely) uninitialized and needs to be initialized
-  if (EEPROM[0] == 'S' && EEPROM[1] == 'C' && EEPROM[2] == 'I' &&
-      EEPROM[3] == 'Z') {
+  if (EEPROM[0] == MAGIC_0 && EEPROM[1] == MAGIC_1 && EEPROM[2] == MAGIC_2 &&
+      EEPROM[3] == MAGIC_3) {
     Serial.println("EEPROM is initialized.");
 
     for (int i = 0; i < NUM_GATES; i++) {
@@ -332,10 +337,10 @@ void initMemory() {
   Serial.println("Initializing EEPROM...");
 
   // set the magic header
-  EEPROM[0] = 'S';
-  EEPROM[1] = 'C';
-  EEPROM[2] = 'I';
-  EEPROM[3] = 'Z';
+  EEPROM[0] = MAGIC_0;
+  EEPROM[1] = MAGIC_1;
+  EEPROM[2] = MAGIC_2;
+  EEPROM[3] = MAGIC_3;
 
   // just initializing a bunch of spots for some futureproofing.
   for (int i = EEPROM_START; i < 255; i++) {
