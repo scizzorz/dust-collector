@@ -39,7 +39,7 @@
 
 unsigned char knobToMem(int knobReading) { return knobReading / 4; }
 
-int memToPosition(unsigned char mem) { return NEUTRAL + (mem - 128) / 4; }
+int memToPosition(unsigned char mem) { return NEUTRAL + (mem - 128) / 2; }
 
 class Knob {
 private:
