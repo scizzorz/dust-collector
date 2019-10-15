@@ -9,7 +9,7 @@ BOOTLOADER_PARENT = /usr/share/arduino/hardware/archlinux-arduino/avr/bootloader
 ARDUINO_LIB_PATH = /usr/share/arduino/hardware/archlinux-arduino/avr/libraries
 
 
-BOARD_TAG    = uno
+BOARD_TAG    = micro
 ARDUINO_LIBS = Servo Adafruit_NeoPixel EEPROM
 
 include /usr/share/arduino/Arduino.mk
