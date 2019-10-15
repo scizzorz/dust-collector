@@ -160,14 +160,14 @@ public:
   void init() { pinMode(this->pin, INPUT); }
 
   /// this does *not* do any debouncing!
-  bool readButton() { return digitalRead(this->pin); }
+  bool read() { return digitalRead(this->pin); }
 
   /// This returns true if the button state CHANGED. It does *not* return the
   /// button state! If you want to react to presses, use
   /// `.checkPress() && .isPressed()`
   bool checkPress() {
     bool change = false;
-    int currentReading = this->readButton();
+    int currentReading = this->read();
     if (currentReading != this->lastButtonState) {
       this->lastDebounce = millis();
     }
@@ -393,7 +393,7 @@ void setup() {
 
   // check for a held button to enter programming mode
   for (int i = 0; i < NUM_GATES; i++) {
-    if (butts[i].readButton()) {
+    if (butts[i].read()) {
       programmingState = STATE_PROGRAMMING;
     }
   }
