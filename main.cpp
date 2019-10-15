@@ -106,26 +106,20 @@ public:
 
 class Gate {
 private:
-  unsigned long lastDebounce = 0;
-  int lastButtonState = HIGH;
-  int buttonPin;
   int servoPin;
   int openPosition;
   int closePosition;
   Servo servo;
   bool status = CLOSED;
-  int buttonState = LOW;
 
 public:
-  Gate(int buttonPin, int servoPin)
-      : buttonPin(buttonPin), servoPin(servoPin), openPosition(NEUTRAL),
-        closePosition(NEUTRAL) {}
+  Gate(int servoPin)
+      : servoPin(servoPin), openPosition(NEUTRAL), closePosition(NEUTRAL) {}
 
   void init(int openPosition, int closePosition) {
     this->setOpenPosition(openPosition);
     this->setClosePosition(closePosition);
 
-    pinMode(this->buttonPin, INPUT);
     this->servo.attach(this->servoPin, 400, 2500);
     this->servo.write(this->closePosition);
   }
@@ -149,6 +143,23 @@ public:
       delay(MOVETIME);
     }
   }
+
+  bool isOpen() { return this->status; }
+};
+
+class Button {
+private:
+  int buttonPin;
+  unsigned long lastDebounce;
+  int buttonState;
+  int lastButtonState;
+
+public:
+  Button(int buttonPin)
+      : buttonPin(buttonPin), lastDebounce(0), buttonState(LOW),
+        lastButtonState(HIGH) {}
+
+  void init() { pinMode(this->buttonPin, INPUT); }
 
   /// this does *not* do any debouncing!
   bool readButton() { return digitalRead(this->buttonPin); }
@@ -175,17 +186,20 @@ public:
   }
 
   bool isPressed() { return this->buttonState; }
-
-  bool isOpen() { return this->status; }
 };
 
+// pins 2 + 3
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+Knob knob(A2);
+Beeper beeper(A3);
 Collector collector(A4, A5);
 Gate gates[NUM_GATES] = {
-    Gate(13, 11), Gate(12, 10), Gate(8, 9), Gate(7, 6), Gate(4, 5), Gate(2, 3),
+    Gate(5), Gate(6), Gate(9), Gate(10), Gate(11), Gate(12),
 };
-Beeper beeper(A2);
-Knob knob(A0);
-Adafruit_SSD1306 display(128, 64, &Wire, -1);
+Button butts[NUM_GATES] = {
+    Button(4), Button(7), Button(8), Button(13), Button(A0), Button(A1),
+};
 
 int programmingGate = -1;
 int programmingState = STATE_NORMAL;
@@ -371,6 +385,7 @@ void setup() {
     display.println("ready");
     display.display();
 
+    butts[i].init();
     gates[i].init(memToPosition(EEPROM[OPEN_ADDR(i)]),
                   memToPosition(EEPROM[CLOSE_ADDR(i)]));
 
@@ -380,7 +395,7 @@ void setup() {
 
   // check for a held button to enter programming mode
   for (int i = 0; i < NUM_GATES; i++) {
-    if (gates[i].readButton()) {
+    if (butts[i].readButton()) {
       programmingState = STATE_PROGRAMMING;
     }
   }
@@ -405,7 +420,7 @@ void loop() {
   // check for button presses
   /*
   for (int i = 0; i < NUM_GATES; i++) {
-    if (gates[i].checkPress() && gates[i].isPressed()) {
+    if (butts[i].checkPress() && butts[i].isPressed()) {
       if (programmingState == STATE_NORMAL) {
         pressNormal(i);
       } else {
