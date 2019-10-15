@@ -106,21 +106,20 @@ public:
 
 class Gate {
 private:
-  int servoPin;
+  int pin;
   int openPosition;
   int closePosition;
   Servo servo;
   bool status = CLOSED;
 
 public:
-  Gate(int servoPin)
-      : servoPin(servoPin), openPosition(NEUTRAL), closePosition(NEUTRAL) {}
+  Gate(int pin) : pin(pin), openPosition(NEUTRAL), closePosition(NEUTRAL) {}
 
   void init(int openPosition, int closePosition) {
     this->setOpenPosition(openPosition);
     this->setClosePosition(closePosition);
 
-    this->servo.attach(this->servoPin, 400, 2500);
+    this->servo.attach(this->pin, 400, 2500);
     this->servo.write(this->closePosition);
   }
 
@@ -149,20 +148,19 @@ public:
 
 class Button {
 private:
-  int buttonPin;
+  int pin;
   unsigned long lastDebounce;
   int buttonState;
   int lastButtonState;
 
 public:
-  Button(int buttonPin)
-      : buttonPin(buttonPin), lastDebounce(0), buttonState(LOW),
-        lastButtonState(HIGH) {}
+  Button(int pin)
+      : pin(pin), lastDebounce(0), buttonState(LOW), lastButtonState(HIGH) {}
 
-  void init() { pinMode(this->buttonPin, INPUT); }
+  void init() { pinMode(this->pin, INPUT); }
 
   /// this does *not* do any debouncing!
-  bool readButton() { return digitalRead(this->buttonPin); }
+  bool readButton() { return digitalRead(this->pin); }
 
   /// This returns true if the button state CHANGED. It does *not* return the
   /// button state! If you want to react to presses, use
@@ -418,7 +416,6 @@ void setup() {
 
 void loop() {
   // check for button presses
-  /*
   for (int i = 0; i < NUM_GATES; i++) {
     if (butts[i].checkPress() && butts[i].isPressed()) {
       if (programmingState == STATE_NORMAL) {
@@ -433,8 +430,6 @@ void loop() {
   if (programmingState == STATE_OPEN || programmingState == STATE_CLOSED) {
     gates[programmingGate].writePosition(memToPosition(knobToMem(knob.read())));
   }
-  */
-  delay(100);
 }
 
 int main(void) {
