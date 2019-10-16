@@ -202,6 +202,46 @@ Button butts[NUM_GATES] = {
 int programmingGate = -1;
 int programmingState = STATE_NORMAL;
 
+void prepStatus() {
+  display.setCursor(0, 8);
+  display.println("collector:");
+
+  for (int i = 0; i < NUM_GATES; i++) {
+    display.setCursor(0, 16 + 8 * i);
+    display.print("gate ");
+    display.print(i);
+    display.print(": ");
+  }
+}
+
+void dispCollector(String x) {
+  display.setCursor(66, 8);
+  display.print(x);
+}
+
+void dispCollectorCurrent() { dispCollector(collector.isOn() ? "on" : "off"); }
+
+void dispGate(int i, String x) {
+  display.setCursor(48, 16 + 8 * i);
+  display.print(x);
+}
+
+void dispGatesCurrentExcept(int j, String x) {
+  for (int i = 0; i < NUM_GATES; i++) {
+    if (i == j) {
+      dispGate(i, x);
+    } else {
+      dispGate(i, gates[i].isOpen() ? "open" : "closed");
+    }
+  }
+}
+
+void dispGatesCurrent() {
+  for (int i = 0; i < NUM_GATES; i++) {
+    dispGate(i, gates[i].isOpen() ? "open" : "closed");
+  }
+}
+
 /// what happens when a button is pressed in normal state
 void pressNormal(int i) {
   beeper.beep(200);
@@ -209,43 +249,57 @@ void pressNormal(int i) {
   // if this gate is already open, just toggle the dust collector.
   if (gates[i].isOpen()) {
     collector.toggle();
-    // strip.setPixelColor(NUM_GATES + 1, collector.isOn() ? COLOR_ON :
-    // COLOR_OFF); strip.show();
+
+    display.clearDisplay();
+    prepStatus();
+    dispCollectorCurrent();
+    dispGatesCurrent();
+    display.display();
+
     return;
   }
 
   // if the gate isn't already open, we need to open it.
   // do this before turning on the dust collector to avoid having no open gates
   // with the collector on.
-  // strip.setPixelColor(i, COLOR_OPENING);
-  // strip.show();
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrentExcept(i, "opening");
+  display.display();
 
   gates[i].open();
-
-  // strip.setPixelColor(i, COLOR_OPEN);
-  // strip.show();
 
   // turn on the collector if we need to
   if (!collector.isOn()) {
     collector.on();
   }
 
-  // strip.setPixelColor(NUM_GATES + 1, collector.isOn() ? COLOR_ON :
-  // COLOR_OFF); strip.show();
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
 
   // close all other gates. do this after opening the target gate to avoid
   // having no open gates with the collector on.
   for (int j = 0; j < NUM_GATES; j++) {
-    if (i != j) {
-      // strip.setPixelColor(j, gates[j].isOpen() ? COLOR_CLOSING :
-      // COLOR_CLOSED); strip.show();
+    if (i != j && gates[j].isOpen()) {
+      display.clearDisplay();
+      prepStatus();
+      dispCollectorCurrent();
+      dispGatesCurrentExcept(j, "closing");
+      display.display();
 
       gates[j].close();
-
-      // strip.setPixelColor(j, COLOR_CLOSED);
-      // strip.show();
     }
   }
+
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
 
   beeper.beep(200);
   delay(100);
@@ -358,29 +412,13 @@ void setup() {
   // beep to indicate boot start (a lil late into the routine, but... whatever)
   beeper.beep(200);
 
-  // display boot status
-  display.clearDisplay();
-
-  display.setCursor(0, 0);
-  display.println("collector: ready");
-
-  for (int i = 0; i < NUM_GATES; i++) {
-    int x = 0;
-    int y = 16 + 8 * i;
-    display.setCursor(x, y);
-    display.print("gate ");
-    display.print(i);
-    display.print(": ");
-  }
-
+  prepStatus();
+  dispCollector("ready");
   display.display();
 
   // initialize gates and set the appropriate indicator as we go
   for (int i = 0; i < NUM_GATES; i++) {
-    int x = 8 * 6;
-    int y = 16 + 8 * i;
-    display.setCursor(x, y);
-    display.println("ready");
+    dispGate(i, "ready");
     display.display();
 
     butts[i].init();
@@ -402,6 +440,12 @@ void setup() {
   beeper.beep(200);
   delay(100);
   beeper.beep(200);
+
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
 
   // beep a third time to indicate programming mode
   if (programmingState == STATE_PROGRAMMING) {
