@@ -316,11 +316,12 @@ void pressProgramming(int i) {
     programmingGate = i;
     programmingState = STATE_OPEN;
 
-    // set the gate's indicator so we know that we're adjusting the open
-    // position
-    // strip.clear();
-    // strip.setPixelColor(programmingGate, COLOR_OPEN);
-    // strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.print("open gate ");
+    display.println(i);
+    display.display();
 
     return;
   }
@@ -332,11 +333,12 @@ void pressProgramming(int i) {
     // move to next state
     programmingState = STATE_CLOSED;
 
-    // set the gate's indicator so we know that we're adjusting the close
-    // position
-    // strip.clear();
-    // strip.setPixelColor(i, COLOR_CLOSED);
-    // strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.print("close gate ");
+    display.println(i);
+    display.display();
 
     // beep one more time
     delay(100);
@@ -353,9 +355,10 @@ void pressProgramming(int i) {
     programmingState = STATE_PROGRAMMING;
     programmingGate = -1;
 
-    // clear pixels to show that it's in idle mode
-    // strip.clear();
-    // strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.display();
 
     // reinitialize the gate (just for fun)
     gates[i].init(memToPosition(EEPROM[OPEN_ADDR(i)]),
@@ -451,7 +454,8 @@ void setup() {
   if (programmingState == STATE_PROGRAMMING) {
     display.clearDisplay();
     display.setCursor(0, 0);
-    display.println("programming mode");
+    display.print("programming mode");
+    display.display();
 
     beeper.beep(200);
     delay(100);
