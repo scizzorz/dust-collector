@@ -1,7 +1,10 @@
-#include <Adafruit_NeoPixel.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <SPI.h>
 #include <Servo.h>
+#include <Wire.h>
 
 #define NUM_PIX 12
 #define NUM_GATES 6
@@ -103,27 +106,20 @@ public:
 
 class Gate {
 private:
-  unsigned long lastDebounce = 0;
-  int lastButtonState = HIGH;
-  int buttonPin;
-  int servoPin;
+  int pin;
   int openPosition;
   int closePosition;
   Servo servo;
   bool status = CLOSED;
-  int buttonState = LOW;
 
 public:
-  Gate(int buttonPin, int servoPin)
-      : buttonPin(buttonPin), servoPin(servoPin), openPosition(NEUTRAL),
-        closePosition(NEUTRAL) {}
+  Gate(int pin) : pin(pin), openPosition(NEUTRAL), closePosition(NEUTRAL) {}
 
   void init(int openPosition, int closePosition) {
     this->setOpenPosition(openPosition);
     this->setClosePosition(closePosition);
 
-    pinMode(this->buttonPin, INPUT);
-    this->servo.attach(this->servoPin, 400, 2500);
+    this->servo.attach(this->pin, 400, 2500);
     this->servo.write(this->closePosition);
   }
 
@@ -147,15 +143,31 @@ public:
     }
   }
 
+  bool isOpen() { return this->status; }
+};
+
+class Button {
+private:
+  int pin;
+  unsigned long lastDebounce;
+  int buttonState;
+  int lastButtonState;
+
+public:
+  Button(int pin)
+      : pin(pin), lastDebounce(0), buttonState(LOW), lastButtonState(HIGH) {}
+
+  void init() { pinMode(this->pin, INPUT); }
+
   /// this does *not* do any debouncing!
-  bool readButton() { return digitalRead(this->buttonPin); }
+  bool read() { return digitalRead(this->pin); }
 
   /// This returns true if the button state CHANGED. It does *not* return the
   /// button state! If you want to react to presses, use
   /// `.checkPress() && .isPressed()`
   bool checkPress() {
     bool change = false;
-    int currentReading = this->readButton();
+    int currentReading = this->read();
     if (currentReading != this->lastButtonState) {
       this->lastDebounce = millis();
     }
@@ -172,20 +184,63 @@ public:
   }
 
   bool isPressed() { return this->buttonState; }
-
-  bool isOpen() { return this->status; }
 };
 
+// pins 2 + 3
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+Knob knob(A2);
+Beeper beeper(A3);
 Collector collector(A4, A5);
 Gate gates[NUM_GATES] = {
-    Gate(13, 11), Gate(12, 10), Gate(8, 9), Gate(7, 6), Gate(4, 5), Gate(2, 3),
+    Gate(5), Gate(6), Gate(9), Gate(10), Gate(11), Gate(12),
 };
-Adafruit_NeoPixel strip(12, A3, NEO_GRB + NEO_KHZ800);
-Beeper beeper(A2);
-Knob knob(A0);
+Button butts[NUM_GATES] = {
+    Button(4), Button(7), Button(8), Button(13), Button(A0), Button(A1),
+};
 
 int programmingGate = -1;
 int programmingState = STATE_NORMAL;
+
+void prepStatus() {
+  display.setCursor(0, 8);
+  display.println("collector:");
+
+  for (int i = 0; i < NUM_GATES; i++) {
+    display.setCursor(0, 16 + 8 * i);
+    display.print("gate ");
+    display.print(i);
+    display.print(": ");
+  }
+}
+
+void dispCollector(String x) {
+  display.setCursor(66, 8);
+  display.print(x);
+}
+
+void dispCollectorCurrent() { dispCollector(collector.isOn() ? "on" : "off"); }
+
+void dispGate(int i, String x) {
+  display.setCursor(48, 16 + 8 * i);
+  display.print(x);
+}
+
+void dispGatesCurrentExcept(int j, String x) {
+  for (int i = 0; i < NUM_GATES; i++) {
+    if (i == j) {
+      dispGate(i, x);
+    } else {
+      dispGate(i, gates[i].isOpen() ? "open" : "closed");
+    }
+  }
+}
+
+void dispGatesCurrent() {
+  for (int i = 0; i < NUM_GATES; i++) {
+    dispGate(i, gates[i].isOpen() ? "open" : "closed");
+  }
+}
 
 /// what happens when a button is pressed in normal state
 void pressNormal(int i) {
@@ -194,43 +249,57 @@ void pressNormal(int i) {
   // if this gate is already open, just toggle the dust collector.
   if (gates[i].isOpen()) {
     collector.toggle();
-    strip.setPixelColor(NUM_GATES + 1, collector.isOn() ? COLOR_ON : COLOR_OFF);
-    strip.show();
+
+    display.clearDisplay();
+    prepStatus();
+    dispCollectorCurrent();
+    dispGatesCurrent();
+    display.display();
+
     return;
   }
 
   // if the gate isn't already open, we need to open it.
   // do this before turning on the dust collector to avoid having no open gates
   // with the collector on.
-  strip.setPixelColor(i, COLOR_OPENING);
-  strip.show();
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrentExcept(i, "opening");
+  display.display();
 
   gates[i].open();
-
-  strip.setPixelColor(i, COLOR_OPEN);
-  strip.show();
 
   // turn on the collector if we need to
   if (!collector.isOn()) {
     collector.on();
   }
 
-  strip.setPixelColor(NUM_GATES + 1, collector.isOn() ? COLOR_ON : COLOR_OFF);
-  strip.show();
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
 
   // close all other gates. do this after opening the target gate to avoid
   // having no open gates with the collector on.
   for (int j = 0; j < NUM_GATES; j++) {
-    if (i != j) {
-      strip.setPixelColor(j, gates[j].isOpen() ? COLOR_CLOSING : COLOR_CLOSED);
-      strip.show();
+    if (i != j && gates[j].isOpen()) {
+      display.clearDisplay();
+      prepStatus();
+      dispCollectorCurrent();
+      dispGatesCurrentExcept(j, "closing");
+      display.display();
 
       gates[j].close();
-
-      strip.setPixelColor(j, COLOR_CLOSED);
-      strip.show();
     }
   }
+
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
 
   beeper.beep(200);
   delay(100);
@@ -247,11 +316,12 @@ void pressProgramming(int i) {
     programmingGate = i;
     programmingState = STATE_OPEN;
 
-    // set the gate's indicator so we know that we're adjusting the open
-    // position
-    strip.clear();
-    strip.setPixelColor(programmingGate, COLOR_OPEN);
-    strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.print("open gate ");
+    display.println(i);
+    display.display();
 
     return;
   }
@@ -260,19 +330,15 @@ void pressProgramming(int i) {
     // save open position
     EEPROM[OPEN_ADDR(programmingGate)] = knobToMem(knob.read());
 
-    Serial.print("Saving open position for gate #");
-    Serial.print(i, DEC);
-    Serial.print(" => ");
-    Serial.println(EEPROM[OPEN_ADDR(i)], DEC);
-
     // move to next state
     programmingState = STATE_CLOSED;
 
-    // set the gate's indicator so we know that we're adjusting the close
-    // position
-    strip.clear();
-    strip.setPixelColor(i, COLOR_CLOSED);
-    strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.print("close gate ");
+    display.println(i);
+    display.display();
 
     // beep one more time
     delay(100);
@@ -285,18 +351,14 @@ void pressProgramming(int i) {
     // save close position
     EEPROM[CLOSE_ADDR(i)] = knobToMem(knob.read());
 
-    Serial.print("Saving close position for gate #");
-    Serial.print(i, DEC);
-    Serial.print(" => ");
-    Serial.println(EEPROM[CLOSE_ADDR(i)], DEC);
-
     // move to next state
     programmingState = STATE_PROGRAMMING;
     programmingGate = -1;
 
-    // clear pixels to show that it's in idle mode
-    strip.clear();
-    strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("programming mode");
+    display.display();
 
     // reinitialize the gate (just for fun)
     gates[i].init(memToPosition(EEPROM[OPEN_ADDR(i)]),
@@ -317,24 +379,8 @@ void initMemory() {
   // memory is (very likely) uninitialized and needs to be initialized
   if (EEPROM[0] == MAGIC_0 && EEPROM[1] == MAGIC_1 && EEPROM[2] == MAGIC_2 &&
       EEPROM[3] == MAGIC_3) {
-    Serial.println("EEPROM is initialized.");
-
-    for (int i = 0; i < NUM_GATES; i++) {
-      Serial.print("gate #");
-      Serial.print(i, DEC);
-      Serial.print(" open[");
-      Serial.print(OPEN_ADDR(i), DEC);
-      Serial.print("] = ");
-      Serial.print(EEPROM[OPEN_ADDR(i)], DEC);
-      Serial.print(", close[");
-      Serial.print(CLOSE_ADDR(i), DEC);
-      Serial.print("] = ");
-      Serial.println(EEPROM[CLOSE_ADDR(i)], DEC);
-    }
     return;
   }
-
-  Serial.println("Initializing EEPROM...");
 
   // set the magic header
   EEPROM[0] = MAGIC_0;
@@ -349,13 +395,18 @@ void initMemory() {
 }
 
 void setup() {
-  // initialize everything
-  Serial.begin(9600);
-
   initMemory();
 
-  strip.begin();
-  strip.show();
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.display();
+  delay(1000);
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println("booting...");
+  display.display();
 
   beeper.init();
   knob.init();
@@ -364,13 +415,16 @@ void setup() {
   // beep to indicate boot start (a lil late into the routine, but... whatever)
   beeper.beep(200);
 
-  // set indicator for dust collector
-  strip.setPixelColor(NUM_GATES + 1, COLOR_READY);
+  prepStatus();
+  dispCollector("ready");
+  display.display();
 
   // initialize gates and set the appropriate indicator as we go
   for (int i = 0; i < NUM_GATES; i++) {
-    strip.setPixelColor(i, COLOR_READY);
-    strip.show();
+    dispGate(i, "ready");
+    display.display();
+
+    butts[i].init();
     gates[i].init(memToPosition(EEPROM[OPEN_ADDR(i)]),
                   memToPosition(EEPROM[CLOSE_ADDR(i)]));
 
@@ -380,9 +434,8 @@ void setup() {
 
   // check for a held button to enter programming mode
   for (int i = 0; i < NUM_GATES; i++) {
-    if (gates[i].readButton()) {
+    if (butts[i].read()) {
       programmingState = STATE_PROGRAMMING;
-      Serial.println("Entering programming mode");
     }
   }
 
@@ -391,10 +444,19 @@ void setup() {
   delay(100);
   beeper.beep(200);
 
+  display.clearDisplay();
+  prepStatus();
+  dispCollectorCurrent();
+  dispGatesCurrent();
+  display.display();
+
   // beep a third time to indicate programming mode
   if (programmingState == STATE_PROGRAMMING) {
-    strip.clear();
-    strip.show();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("programming mode");
+    display.display();
+
     beeper.beep(200);
     delay(100);
   }
@@ -403,7 +465,7 @@ void setup() {
 void loop() {
   // check for button presses
   for (int i = 0; i < NUM_GATES; i++) {
-    if (gates[i].checkPress() && gates[i].isPressed()) {
+    if (butts[i].checkPress() && butts[i].isPressed()) {
       if (programmingState == STATE_NORMAL) {
         pressNormal(i);
       } else {

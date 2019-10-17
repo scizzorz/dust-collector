@@ -10,6 +10,6 @@ ARDUINO_LIB_PATH = /usr/share/arduino/hardware/archlinux-arduino/avr/libraries
 
 
 BOARD_TAG    = micro
-ARDUINO_LIBS = Servo Adafruit_NeoPixel EEPROM
+ARDUINO_LIBS = Servo Adafruit_SSD1306 EEPROM Wire SPI Adafruit_GFX_Library
 
 include /usr/share/arduino/Arduino.mk
